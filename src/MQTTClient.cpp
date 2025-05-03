@@ -348,6 +348,15 @@
             for(uint16_t i=0; i<topic_length; i++) m_buffer[index++]=m_buffer[index+1];
             m_buffer[index++]=0x00;
 
+            // End message with 0x00
+            if (data_length<m_buffer_size) m_buffer[data_length]=0x00;
+            else
+            {
+              // Overflow : flush and ignore data
+              m_client.flush();
+              return;
+            }
+
             // QoS 0
             if ((m_buffer[0]&0x06)==MQTT_QOS0)
             {
