@@ -279,12 +279,15 @@
       m_buffer[index++]=(topic_length>>8);
       m_buffer[index++]=(topic_length>>0);
       for (uint16_t i=0; i<topic_length; i++) m_buffer[index++]=topic[i];
-
-      // Message
-      for (uint16_t i=0; i<message_length; i++) m_buffer[index++]=message[i];
   
     // Send message to broker
-    return send_buffer(m_buffer,index);
+    if (send_buffer(m_buffer,index))
+    {
+      return send_buffer((uint8_t*) message,message_length);
+    }
+
+    // Return : error
+    return false;
   }
 
 
