@@ -125,7 +125,7 @@
       }
 
     // Send message to broker
-    if (!send_message(index)) return false;
+    if (!send_buffer(m_buffer,index)) return false;
 
     // Get response message
     uint16_t response_length=0;
@@ -158,7 +158,7 @@
     // Send DISCONNECT message to broker
     m_buffer[0]=MQTT_DISCONNECT;
     m_buffer[1]=0;
-    send_message(2);
+    send_buffer(m_buffer,2);
 
     // Reset WiFi client
     m_client.flush();
@@ -207,7 +207,7 @@
       m_buffer[index++]=0x00;
 
     // Send message to broker
-    return send_message(index);
+    return send_buffer(m_buffer,index);
   }
 
 
@@ -246,7 +246,7 @@
       for (uint16_t i=0; i<topic_length; i++) m_buffer[index++]=topic[i];
 
     // Send message to broker
-    return send_message(index);
+    return send_buffer(m_buffer,index);
   }
 
 
@@ -284,7 +284,7 @@
       for (uint16_t i=0; i<message_length; i++) m_buffer[index++]=message[i];
   
     // Send message to broker
-    return send_message(index);
+    return send_buffer(m_buffer,index);
   }
 
 
@@ -378,7 +378,7 @@
               m_buffer[1]=0x00;
               m_buffer[2]=(message_id>>8);
               m_buffer[3]=(message_id>>0);
-              send_message(4);
+              send_buffer(m_buffer,4);
             }
           }
           break;
@@ -392,7 +392,7 @@
         case MQTT_PING:
           m_buffer[0]=MQTT_PING_ACK;
           m_buffer[1]=0x00;
-          send_message(2);
+          send_buffer(m_buffer,2);
           break;
       }
     }
@@ -413,7 +413,7 @@
           // Send PING to broker
           m_buffer[0]=MQTT_PING;
           m_buffer[1]=0x00;
-          m_ping_sent=send_message(2);
+          m_ping_sent=send_buffer(m_buffer,2);
         }
       }
     }
@@ -441,18 +441,25 @@
 
 
 
-  // Send message
-  bool MQTTClient::send_message(uint16_t length)
+  // Send buffer
+  bool MQTTClient::send_buffer(uint8_t* buffer,uint16_t length)
   {
-    // Send message to broker
-    if (m_client.write(m_buffer,length)!=length)
+    // Send buffer to broker
+    for(uint16_t i=0; i<length; i++)
     {
-      // Reset WiFi connection
-      m_client.flush();
-      m_client.stop();
+      // Send byte
+      if (m_client.write(buffer[i])!=1)
+      {
+        // Reset WiFi connection
+        m_client.flush();
+        m_client.stop();
 
-      // Return : connection failed
-      return false;
+        // Return : connection failed
+        return false;
+      }
+
+      // Process background tasks
+      yield();
     }
 
     // Update ping process

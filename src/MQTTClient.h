@@ -62,8 +62,8 @@ class MQTTClient
     // Set length in buffer
     void set_length(uint16_t& index,uint16_t length);
 
-    // Send message
-    bool send_message(uint16_t length);
+    // Send buffer
+    bool send_buffer(uint8_t* buffer,uint16_t length);
 
     // Get response
     bool get_response(uint16_t& length);
