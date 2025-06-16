@@ -48,8 +48,9 @@ void mqtt_callback(char* topic,uint8_t* message,uint16_t length)
 
 
 // Global variables
+WiFiClient tcp_client;
 uint8_t g_mqtt_buffer[MQTT_BUFFER_SIZE];
-MQTTClient g_mqtt_client(mqtt_callback,g_mqtt_buffer,MQTT_INTERNAL_BUFFER_SIZE);
+MQTTClient g_mqtt_client(&tcp_client,mqtt_callback,g_mqtt_buffer,MQTT_INTERNAL_BUFFER_SIZE);
 
 
 

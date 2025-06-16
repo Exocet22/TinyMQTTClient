@@ -11,12 +11,8 @@
 
 
 // Includes
-#ifdef ARDUINO_ARCH_ESP8266
-  #include <ESP8266WiFi.h>
-#endif
-#ifdef ARDUINO_ARCH_ESP32
-  #include <WiFiClient.h>
-#endif
+#include <Arduino.h>
+#include <Client.h>
 #include "MQTTClient.h"
 
 
@@ -24,8 +20,11 @@
 // MQTTClient public functions
 
   // Constructor
-  MQTTClient::MQTTClient(void (*callback)(char* topic,uint8_t* message,uint16_t length),uint8_t* buffer,uint16_t buffer_size)
+  MQTTClient::MQTTClient(Client* p_client,void (*callback)(char* topic,uint8_t* message,uint16_t length),uint8_t* buffer,uint16_t buffer_size)
   {
+    // Store TCP client pointer
+    m_p_client=p_client;
+
     // Store callback
     m_callback=callback;
 
@@ -60,6 +59,9 @@
   // Connect to server
   bool MQTTClient::connect(const char* server_address,const uint16_t server_port,const char* id,const char* user,const char* password)
   {
+    // Return when TCP client is not defined
+    if (!m_p_client) return false;
+
     // Get lengths
     uint16_t id_length=strlen(id);
     uint16_t user_length=strlen(user);
@@ -74,11 +76,11 @@
     if ((4+payload_length)>m_buffer_size) return false;
 
     // Close any previous connection
-    m_client.flush();
-    m_client.stop();
+    m_p_client->flush();
+    m_p_client->stop();
 
     // Connect WiFi client
-    if (!m_client.connect(server_address,server_port)) return false;
+    if (!m_p_client->connect(server_address,server_port)) return false;
 
     // Create CONNECT message
 
@@ -140,8 +142,8 @@
     }
 
     // Wrong response : close connection
-    m_client.flush();
-    m_client.stop();
+    m_p_client->flush();
+    m_p_client->stop();
 
     // Return : not connected
     return false;
@@ -152,8 +154,8 @@
   // Disconnect from server
   bool MQTTClient::disconnect()
   {
-    // Return when client is disconnected
-    if (!m_client.connected()) return false;
+    // Return when TCP client is not defined or disconnected
+    if ((!m_p_client)||(!m_p_client->connected())) return false;
 
     // Send DISCONNECT message to broker
     m_buffer[0]=MQTT_DISCONNECT;
@@ -161,8 +163,8 @@
     send_buffer(m_buffer,2);
 
     // Reset WiFi client
-    m_client.flush();
-    m_client.stop();
+    m_p_client->flush();
+    m_p_client->stop();
 
     // Return : disconnected
     return true;
@@ -173,8 +175,8 @@
   // Subscribe to top
   bool MQTTClient::subscribe(const char* topic)
   {
-    // Return when client is disconnected
-    if (!m_client.connected()) return false;
+    // Return when TCP client is not defined or disconnected
+    if ((!m_p_client)||(!m_p_client->connected())) return false;
 
     // Get lengths
     uint16_t topic_length=strlen(topic);
@@ -215,8 +217,8 @@
   // Unsubscribe from topic
   bool MQTTClient::unsubscribe(const char* topic)
   {
-    // Return when client is disconnected
-    if (!m_client.connected()) return false;
+    // Return when TCP client is not defined or disconnected
+    if ((!m_p_client)||(!m_p_client->connected())) return false;
 
     // Get lengths
     uint16_t topic_length=strlen(topic);
@@ -254,8 +256,8 @@
   // Publish
   bool MQTTClient::publish(const char* topic,const char* message)
   {
-    // Return when client is disconnected
-    if (!m_client.connected()) return false;
+    // Return when TCP client is not defined or disconnected
+    if ((!m_p_client)||(!m_p_client->connected())) return false;
 
     // Get lengths
     uint16_t topic_length=strlen(topic);
@@ -295,20 +297,20 @@
   // Main loop
   void MQTTClient::loop()
   {
-    // Return when disconnected
-    if (!m_client.connected()) return;
+    // Return when TCP client is not defined or disconnected
+    if ((!m_p_client)||(!m_p_client->connected())) return;
 
     // Check if message is available
-    if (m_client.available())
+    if (m_p_client->available())
     {
       // Load buffer
       uint16_t data_length=0;
       bool overflow=false;
       uint32_t timeout=millis()+MQTT_ACTIVITY_TIMEOUT;
-      while(m_client.available())
+      while(m_p_client->available())
       {
         // Read byte received
-        uint8_t byte_received=m_client.read();
+        uint8_t byte_received=m_p_client->read();
         if (data_length<m_buffer_size) m_buffer[data_length++]=byte_received;
         else overflow=true;
 
@@ -318,8 +320,8 @@
         // Timeout : close connection and ignore data
         if (millis()>timeout)
         {
-          m_client.flush();
-          m_client.stop();
+          m_p_client->flush();
+          m_p_client->stop();
           return;
         }
       }
@@ -327,7 +329,7 @@
       // Overflow : flush and ignore data
       if (overflow)
       {
-        m_client.flush();
+        m_p_client->flush();
         return;
       }
 
@@ -356,7 +358,7 @@
             else
             {
               // Overflow : flush and ignore data
-              m_client.flush();
+              m_p_client->flush();
               return;
             }
 
@@ -408,8 +410,8 @@
         if (m_ping_sent)
         {
           // Reset WiFi client
-          m_client.flush();
-          m_client.stop();
+          m_p_client->flush();
+          m_p_client->stop();
         }
         else
         {
@@ -447,15 +449,18 @@
   // Send buffer
   bool MQTTClient::send_buffer(uint8_t* buffer,uint16_t length)
   {
+    // Return when TCP client is not defined
+    if (!m_p_client) return false;
+
     // Send buffer to broker
     for(uint16_t i=0; i<length; i++)
     {
       // Send byte
-      if (m_client.write(buffer[i])!=1)
+      if (m_p_client->write(buffer[i])!=1)
       {
         // Reset WiFi connection
-        m_client.flush();
-        m_client.stop();
+        m_p_client->flush();
+        m_p_client->stop();
 
         // Return : connection failed
         return false;
@@ -478,9 +483,12 @@
   // Get response
   bool MQTTClient::get_response(uint16_t& length)
   {
+    // Return when TCP client is not defined
+    if (!m_p_client) return false;
+
     // Wait for response from broker
     uint32_t timeout=millis()+MQTT_ACTIVITY_TIMEOUT;
-    while (!m_client.available())
+    while (!m_p_client->available())
     {
       // Process background tasks
       delay(150);
@@ -493,10 +501,10 @@
     uint16_t index=0;
     bool overflow=false;
     timeout=millis()+MQTT_ACTIVITY_TIMEOUT;
-    while(m_client.available())
+    while(m_p_client->available())
     {
       // Read byte received
-      uint8_t byte_received=m_client.read();
+      uint8_t byte_received=m_p_client->read();
       if (index<m_buffer_size) m_buffer[index++]=byte_received;
       else overflow=true;
 
@@ -510,7 +518,7 @@
     // Overflow : flush and ignore data
     if (overflow)
     {
-      m_client.flush();
+      m_p_client->flush();
       return false;
     }
 

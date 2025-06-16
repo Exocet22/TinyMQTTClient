@@ -36,8 +36,8 @@ class MQTTClient
   // Private attributes
   private:
 
-    // WiFi client
-    WiFiClient m_client;
+    // TCP client
+    Client* m_p_client=NULL;
 
     // Callback
     void (*m_callback)(char* topic,uint8_t* message,uint16_t length)=NULL;
@@ -74,13 +74,13 @@ class MQTTClient
   public:
 
     // Constructor / destructor
-    MQTTClient(void (*callback)(char* topic,uint8_t* message,uint16_t length)=NULL,uint8_t* buffer=NULL,uint16_t buffer_size=0);
+    MQTTClient(Client* p_client,void (*callback)(char* topic,uint8_t* message,uint16_t length)=NULL,uint8_t* buffer=NULL,uint16_t buffer_size=0);
     ~MQTTClient();
 
     // Connect / disconnect
     bool connect(const char* server_address,const uint16_t server_port,const char* id,const char* user=NULL,const char* password=NULL);
     bool disconnect();
-    bool connected() {return m_client.connected();};
+    bool connected() {return m_p_client?m_p_client->connected():false;};
     
   
     // Subscribe / unsubscribe
