@@ -38,6 +38,7 @@ See [examples](examples) folder.
  - Topic and message sizes limited to 16 bits.
  - Keepalive set to 15 seconds.
  - Ping set to 10 seconds.
+ - Supports external TCP client.
 
 ## License
 
