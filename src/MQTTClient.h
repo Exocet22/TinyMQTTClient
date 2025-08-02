@@ -48,6 +48,8 @@ class MQTTClient
     uint32_t m_buffer_size=0;
 
     // Ping
+    uint32_t m_ping_start_time=0;
+    uint32_t m_ping_time=0;
     uint32_t m_ping_timeout=0;
     bool m_ping_sent=false;
 
@@ -92,6 +94,9 @@ class MQTTClient
 
     // Main loop
     void loop();
+
+    // Get ping time
+    uint32_t get_ping_time();
 };
 
 

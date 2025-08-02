@@ -390,6 +390,7 @@
 
         // Ping acknoledgement : send another ping
         case MQTT_PING_ACK:
+          m_ping_time=millis()-m_ping_start_time;
           m_ping_sent=false;
           break;
 
@@ -415,6 +416,9 @@
         }
         else
         {
+          // Start ping time count
+          m_ping_start_time=millis();
+
           // Send PING to broker
           m_buffer[0]=MQTT_PING;
           m_buffer[1]=0x00;
@@ -422,6 +426,15 @@
         }
       }
     }
+  }
+
+
+
+  // Get ping time
+  uint32_t MQTTClient::get_ping_time()
+  {
+    // Return ping time
+    return m_ping_time;
   }
 
 
