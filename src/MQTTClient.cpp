@@ -318,7 +318,7 @@
         yield();
 
         // Timeout : close connection and ignore data
-        if (millis()>timeout)
+        if (((int32_t)(millis()-timeout))>0)
         {
           m_p_client->flush();
           m_p_client->stop();
@@ -405,7 +405,7 @@
     else
     {
       // Process ping
-      if (millis()>m_ping_timeout)
+      if (((int32_t)(millis()-m_ping_timeout))>0)
       {
         // Check if a ping was already sent
         if (m_ping_sent)
@@ -507,7 +507,7 @@
       delay(150);
 
       // Return : timeout
-      if (millis()>timeout) return false;
+      if (((int32_t)(millis()-timeout))>0) return false;
     }
 
     // Load buffer
@@ -525,7 +525,7 @@
       yield();
 
       // Return : timeout
-      if (millis()>timeout) return false;
+      if (((int32_t)(millis()-timeout))>0) return false;
     }
 
     // Overflow : flush and ignore data
